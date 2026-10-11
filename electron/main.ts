@@ -10,31 +10,45 @@ import { setImgurClientId } from './services/UploadService'
 
 const isDev = !app.isPackaged
 
-type ThemeName = 'oled' | 'dark' | 'light'
+interface WindowTheme {
+  background: string
+  dark: boolean
+}
 
-const THEME_BG: Record<ThemeName, string> = { oled: '#000000', dark: '#0a0a0a', light: '#ffffff' }
+const DEFAULT_THEME: WindowTheme = { background: '#000000', dark: true }
+
+const LEGACY_THEMES: Record<string, WindowTheme> = {
+  oled: { background: '#000000', dark: true },
+  dark: { background: '#0a0a0a', dark: true },
+  light: { background: '#ffffff', dark: false },
+}
+
+const isHex = (value: unknown): value is string => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)
 
 function themePath(): string {
   return path.join(app.getPath('userData'), 'theme.json')
 }
 
-function readTheme(): ThemeName {
+function readTheme(): WindowTheme {
   try {
-    const theme = JSON.parse(fs.readFileSync(themePath(), 'utf8')).theme
-    if (theme === 'oled' || theme === 'dark' || theme === 'light') return theme
+    const saved = JSON.parse(fs.readFileSync(themePath(), 'utf8'))
+    if (isHex(saved.background) && typeof saved.dark === 'boolean') {
+      return { background: saved.background, dark: saved.dark }
+    }
+    if (LEGACY_THEMES[saved.theme]) return LEGACY_THEMES[saved.theme]
   } catch {}
-  return 'oled'
+  return DEFAULT_THEME
 }
 
-function writeTheme(theme: ThemeName): void {
+function writeTheme(theme: WindowTheme): void {
   try {
-    fs.writeFileSync(themePath(), JSON.stringify({ theme }))
+    fs.writeFileSync(themePath(), JSON.stringify(theme))
   } catch {}
 }
 
-function applyTheme(win: BrowserWindow, theme: ThemeName): void {
-  nativeTheme.themeSource = theme === 'light' ? 'light' : 'dark'
-  win.setBackgroundColor(THEME_BG[theme])
+function applyTheme(win: BrowserWindow, theme: WindowTheme): void {
+  nativeTheme.themeSource = theme.dark ? 'dark' : 'light'
+  win.setBackgroundColor(theme.background)
 }
 
 function openInBrowser(url: unknown): void {
@@ -58,7 +72,7 @@ function createWindow() {
     height: 800,
     show: false,
     frame: false,
-    backgroundColor: THEME_BG[theme],
+    backgroundColor: theme.background,
     webPreferences: {
       preload: path.join(__dirname, 'preload/index.js'),
       contextIsolation: true,
@@ -96,8 +110,9 @@ function registerShellHandlers(win: BrowserWindow): void {
     win.setTitle(title)
   })
 
-  ipcMain.on('shell:setTheme', (_event, value: string) => {
-    const theme: ThemeName = value === 'light' ? 'light' : value === 'dark' ? 'dark' : 'oled'
+  ipcMain.on('shell:setTheme', (_event, _name: string, background: unknown, dark: unknown) => {
+    if (!isHex(background) || typeof dark !== 'boolean') return
+    const theme: WindowTheme = { background, dark }
     applyTheme(win, theme)
     writeTheme(theme)
   })
@@ -127,7 +142,7 @@ app.whenReady().then(() => {
   app.setAppUserModelId('com.ezk.issuecards')
 
   const startTheme = readTheme()
-  nativeTheme.themeSource = startTheme === 'light' ? 'light' : 'dark'
+  nativeTheme.themeSource = startTheme.dark ? 'dark' : 'light'
 
   const win = createWindow()
 

@@ -5,7 +5,6 @@ import PanelShell from '@/components/layout/PanelShell';
 import DatePicker from '@/components/shared/DatePicker';
 import UserIdentity from '@/components/shared/UserIdentity';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Empty,
@@ -22,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   DEFAULT_RANK,
@@ -38,6 +38,7 @@ import {
 } from '@/lib/leaderboard';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { isFromSheet, useIssueStore } from '@/stores/useIssueStore';
+import { HEAD_CLASS } from './boardStyles';
 import StatusProgress from './StatusProgress';
 import TestBoard from './TestBoard';
 
@@ -86,60 +87,77 @@ export default function LeaderboardPanel() {
   const active = rows.filter(didAnything);
   const best = active.length ? Math.max(...active.map(r => r.score), 1) : 1;
 
-  const window =
-    range.from || range.to
-      ? `${range.from || 'the start'} to ${range.to || 'today'}`
-      : 'everything, from the first card on';
+  const quick = QUICK.find(q => {
+    const next = q.range();
+    return next.from === range.from && next.to === range.to;
+  });
+  const windowLabel = quick?.label ?? 'Custom range';
 
-  const actions = (
-    <>
-      {QUICK.map(quick => (
-        <Button key={quick.label} variant="outline" size="sm" onClick={() => setRange(quick.range())}>
-          {quick.label}
-        </Button>
-      ))}
-    </>
+  const topbar = (
+    <div className="flex flex-none flex-wrap items-center gap-2 border-b border-border px-[22px] py-2">
+      <ToggleGroup
+        type="single"
+        variant="outline"
+        size="sm"
+        value={quick?.label ?? ''}
+        onValueChange={label => {
+          const picked = QUICK.find(q => q.label === label);
+          if (picked) setRange(picked.range());
+        }}
+      >
+        {QUICK.map(entry => (
+          <ToggleGroupItem key={entry.label} value={entry.label} className="px-3 text-[12px]">
+            {entry.label}
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+
+      <div className="flex items-center gap-2">
+        <span className="text-[12px] text-muted-foreground">From</span>
+        <DatePicker
+          value={range.from}
+          onChange={from => setRange(r => ({ ...r, from }))}
+          placeholder="The first card"
+        />
+        <span className="text-[12px] text-muted-foreground">To</span>
+        <DatePicker
+          value={range.to}
+          onChange={to => setRange(r => ({ ...r, to }))}
+          placeholder="Today"
+        />
+      </div>
+
+      <span className="tnum ml-auto hidden whitespace-nowrap text-[12px] text-muted-foreground md:inline-block">
+        {active.length} of {rows.length}
+      </span>
+    </div>
   );
 
   return (
     <PanelShell
       title="Leaderboard"
-      description={workspaceName ? `${workspaceName}, ${window}` : 'No workspace open'}
-      actions={actions}
-      width={1200}
+      badge={<Badge variant="secondary">{windowLabel}</Badge>}
+      description={
+        workspaceName
+          ? `${workspaceName}, ${active.length} ${active.length === 1 ? 'person' : 'people'} on the board`
+          : 'No workspace open'
+      }
+      topbar={topbar}
+      width={0}
     >
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="flex min-w-[220px] flex-col gap-1.5">
-            <span className="text-[12px] text-muted-foreground">From</span>
-            <DatePicker
-              value={range.from}
-              onChange={from => setRange(r => ({ ...r, from }))}
-              placeholder="The first card"
-            />
-          </div>
-          <div className="flex min-w-[220px] flex-col gap-1.5">
-            <span className="text-[12px] text-muted-foreground">To</span>
-            <DatePicker
-              value={range.to}
-              onChange={to => setRange(r => ({ ...r, to }))}
-              placeholder="Today"
-            />
-          </div>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Where the pile stands</CardTitle>
+      <div className="flex flex-col gap-6">
+        <Card className="gap-0 overflow-hidden py-0">
+          <CardHeader className="border-b py-4">
+            <CardTitle className="text-[13px]">Where the pile stands</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="py-5">
             <StatusProgress progress={bars} />
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex-row items-center gap-2">
-            <CardTitle>Who did what</CardTitle>
+        <Card className="gap-0 overflow-hidden py-0">
+          <CardHeader className="flex-row items-center gap-2 border-b py-4">
+            <CardTitle className="text-[13px]">Who did what</CardTitle>
             {fromSheet > 0 && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -155,7 +173,7 @@ export default function LeaderboardPanel() {
               </Tooltip>
             )}
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-0">
             {active.length === 0 ? (
               <Empty>
                 <EmptyHeader>
@@ -172,14 +190,14 @@ export default function LeaderboardPanel() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[40px]" />
-                    <TableHead>Person</TableHead>
+                    <TableHead className="w-[56px] pl-5" />
+                    <TableHead className={HEAD_CLASS}>Person</TableHead>
                     {COLUMNS.map(column => (
-                      <TableHead key={column.key} className="text-right">
+                      <TableHead key={column.key} className={`${HEAD_CLASS} text-right`}>
                         <RankHead column={column} by={by} onPick={setBy} />
                       </TableHead>
                     ))}
-                    <TableHead className="w-[180px] text-right">
+                    <TableHead className={`${HEAD_CLASS} w-[180px] pr-5 text-right`}>
                       <RankHead
                         column={{
                           key: 'score',
@@ -195,7 +213,7 @@ export default function LeaderboardPanel() {
                 <TableBody>
                   {active.map((row, index) => (
                     <TableRow key={row.userId}>
-                      <TableCell>
+                      <TableCell className="pl-5">
                         {index < 3 ? (
                           <Medal size={15} strokeWidth={1.6} style={{ color: PLACE_COLOR[index] }} />
                         ) : (
@@ -225,7 +243,7 @@ export default function LeaderboardPanel() {
                           </span>
                         </TableCell>
                       ))}
-                      <TableCell className="text-right">
+                      <TableCell className="pr-5 text-right">
                         <span className="flex items-center justify-end gap-2">
                           <span className="h-1.5 w-[90px] overflow-hidden rounded-full bg-muted">
                             <span

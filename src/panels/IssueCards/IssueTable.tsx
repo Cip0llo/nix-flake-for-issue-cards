@@ -106,14 +106,47 @@ export default function IssueTable({ cards, onEdit }: IssueTableProps) {
     };
   }, [cards.length]);
 
+  const revealed = useRef<string | null>(null);
+
+  useLayoutEffect(() => {
+    if (!selectedId) {
+      revealed.current = null;
+      return;
+    }
+    if (revealed.current === selectedId) return;
+    const index = cards.findIndex(c => c.id === selectedId);
+    const el = body.current;
+    const viewport = el?.closest<HTMLElement>('[data-slot=scroll-area-viewport]');
+    if (index < 0 || !el || !viewport || viewport.clientHeight === 0) return;
+    revealed.current = selectedId;
+
+    const headerHeight = el.previousElementSibling?.getBoundingClientRect().height ?? 0;
+    const bodyTop =
+      el.getBoundingClientRect().top - viewport.getBoundingClientRect().top + viewport.scrollTop;
+    const rowTop = bodyTop + index * ROW_PX;
+    const rowBottom = rowTop + ROW_PX;
+    const visibleTop = viewport.scrollTop + headerHeight;
+    const visibleBottom = viewport.scrollTop + viewport.clientHeight;
+    if (rowTop >= visibleTop && rowBottom <= visibleBottom) return;
+
+    const distance = rowTop < visibleTop ? visibleTop - rowTop : rowBottom - visibleBottom;
+    if (distance > viewport.clientHeight) {
+      viewport.scrollTop = rowTop - (viewport.clientHeight + headerHeight - ROW_PX) / 2;
+    } else if (rowTop < visibleTop) {
+      viewport.scrollTop = rowTop - headerHeight;
+    } else {
+      viewport.scrollTop = rowBottom - viewport.clientHeight;
+    }
+  }, [selectedId, cards]);
+
   const end = Math.min(range.end, cards.length);
   const start = Math.min(range.start, end);
 
   return (
-    <Table className="table-fixed text-[13px]">
+    <Table containerClassName="overflow-visible" className="table-fixed text-[13px]">
       <TableHeader>
         <TableRow>
-          <TableHead className="sticky top-0 z-10 w-9 bg-card pl-3 pr-0">
+          <TableHead className="sticky top-0 z-10 w-9 bg-card pl-3 pr-0 shadow-[inset_0_-1px_0_var(--border)]">
             <Checkbox
               checked={allChecked}
               aria-label="select all shown"
@@ -124,7 +157,7 @@ export default function IssueTable({ cards, onEdit }: IssueTableProps) {
             <TableHead
               key={label}
               onClick={key ? () => setSort(key) : undefined}
-              className={`sticky top-0 z-10 bg-card text-[11px] font-normal uppercase tracking-wide text-muted-foreground/70 ${
+              className={`sticky top-0 z-10 bg-card shadow-[inset_0_-1px_0_var(--border)] text-[11px] font-normal uppercase tracking-wide text-muted-foreground/70 ${
                 key ? 'cursor-pointer hover:text-foreground' : ''
               } ${className}`}
             >
@@ -204,7 +237,10 @@ const Row = memo(function Row({ card, selected, checked, tagFilter, onEdit }: Ro
         data-state={selected ? 'selected' : undefined}
         className={`group cursor-pointer ${ROW_HEIGHT}`}
       >
-        <TableCell className="w-9 py-0 pl-3 pr-0" onClick={e => e.stopPropagation()}>
+        <TableCell
+          className={`w-9 py-0 pl-3 pr-0 ${selected ? 'shadow-[inset_2px_0_0_var(--primary)]' : 'group-hover:shadow-[inset_2px_0_0_var(--primary)]'}`}
+          onClick={e => e.stopPropagation()}
+        >
           <Checkbox
             checked={checked}
             aria-label={`select ${card.id}`}
@@ -222,7 +258,7 @@ const Row = memo(function Row({ card, selected, checked, tagFilter, onEdit }: Ro
               {fresh && (
                 <span
                   className="dot pulse"
-                  style={{ background: 'var(--success)' }}
+                  style={{ background: 'var(--primary)' }}
                   title="Something happened on this card since you last opened it"
                 />
               )}
@@ -258,7 +294,7 @@ const Row = memo(function Row({ card, selected, checked, tagFilter, onEdit }: Ro
         </TableCell>
         <TableCell className={`overflow-hidden py-0 ${cell(4)}`}>
           <div className="flex items-center gap-2">
-            <Marquee text={card.title} />
+            <Marquee text={card.title} bold={fresh} />
             {card.location && (
               <span className="path max-w-[30%] shrink-0 truncate opacity-70">{card.location}</span>
             )}
@@ -379,7 +415,7 @@ function BadgeStrip({ items }: { items: BadgeItem[] }) {
 
 const MARQUEE_PX_PER_SECOND = 26;
 
-function Marquee({ text }: { text: string }) {
+function Marquee({ text, bold }: { text: string; bold: boolean }) {
   const box = useRef<HTMLDivElement>(null);
   const line = useRef<HTMLSpanElement>(null);
   const [shift, setShift] = useState(0);
@@ -405,7 +441,7 @@ function Marquee({ text }: { text: string }) {
   return (
     <div
       ref={box}
-      className="min-w-0 flex-1 overflow-hidden font-medium text-foreground"
+      className={`min-w-0 flex-1 overflow-hidden ${bold ? 'font-semibold' : 'font-medium'} text-foreground`}
       title={text}
     >
       <span

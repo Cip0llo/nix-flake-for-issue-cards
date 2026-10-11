@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import type { IdentityPrefs, LayoutState, PanelId, SidebarState } from '@/types';
+import { DEFAULT_CUSTOM, type CustomTheme } from '@/lib/themes';
+import type { IdentityPrefs, LayoutState, PanelId, SettingsSection, SidebarState } from '@/types';
 
 const STORE_KEY = 'issue-cards:layout';
 
@@ -8,8 +9,9 @@ export const DEFAULT_LAYOUT: LayoutState = {
   navSidebar: { mode: 'retracted', width: 240 },
   lastSelectedIssueId: null,
   issueColumnWidths: {},
-  issueView: 'table',
   issueSheetWidth: 560,
+  settingsSection: 'account',
+  customTheme: DEFAULT_CUSTOM,
   identity: { click: 'profile', menu: true, underline: true, shape: 'circle' },
 };
 
@@ -18,8 +20,9 @@ interface LayoutStore extends LayoutState {
   setNavSidebar: (patch: Partial<SidebarState>) => void;
   setLastSelectedIssue: (id: string | null) => void;
   setIssueColumnWidth: (column: string, width: number) => void;
-  setIssueView: (view: LayoutState['issueView']) => void;
   setIssueSheetWidth: (width: number) => void;
+  setSettingsSection: (section: SettingsSection) => void;
+  setCustomTheme: (patch: Partial<CustomTheme>) => void;
   setIdentity: (patch: Partial<IdentityPrefs>) => void;
 }
 
@@ -29,6 +32,7 @@ function load(): LayoutState {
     if (!raw) return DEFAULT_LAYOUT;
     const saved = { ...DEFAULT_LAYOUT, ...(JSON.parse(raw) as Partial<LayoutState>) };
     saved.identity = { ...DEFAULT_LAYOUT.identity, ...(saved.identity ?? {}) };
+    saved.customTheme = { ...DEFAULT_CUSTOM, ...(saved.customTheme ?? {}) };
     if ((saved.navSidebar.mode as string) === 'locked-retracted') {
       saved.navSidebar = { ...saved.navSidebar, mode: 'retracted' };
     }
@@ -49,8 +53,9 @@ function scheduleSave(state: LayoutState): void {
       navSidebar: state.navSidebar,
       lastSelectedIssueId: state.lastSelectedIssueId,
       issueColumnWidths: state.issueColumnWidths,
-      issueView: state.issueView,
       issueSheetWidth: state.issueSheetWidth,
+      settingsSection: state.settingsSection,
+      customTheme: state.customTheme,
       identity: state.identity,
     };
     localStorage.setItem(STORE_KEY, JSON.stringify(snapshot));
@@ -84,13 +89,18 @@ export const useLayoutStore = create<LayoutStore>((set, get) => {
       save();
     },
 
-    setIssueView: view => {
-      set({ issueView: view });
+    setIssueSheetWidth: width => {
+      set({ issueSheetWidth: Math.round(width) });
       save();
     },
 
-    setIssueSheetWidth: width => {
-      set({ issueSheetWidth: Math.round(width) });
+    setCustomTheme: patch => {
+      set(s => ({ customTheme: { ...s.customTheme, ...patch } }));
+      save();
+    },
+
+    setSettingsSection: section => {
+      set({ settingsSection: section });
       save();
     },
 

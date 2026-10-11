@@ -3,7 +3,8 @@ import { contextBridge, ipcRenderer, webUtils } from 'electron'
 const api = {
   shell: {
     setTitle: (title: string) => ipcRenderer.send('shell:setTitle', title),
-    setTheme: (theme: string) => ipcRenderer.send('shell:setTheme', theme),
+    setTheme: (theme: string, background: string, dark: boolean) =>
+      ipcRenderer.send('shell:setTheme', theme, background, dark),
     openExternal: (url: string) => ipcRenderer.send('shell:openExternal', url),
     minimize: () => ipcRenderer.send('window:minimize'),
     toggleMaximize: () => ipcRenderer.send('window:maximize'),

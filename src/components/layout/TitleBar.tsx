@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Copy, Download, Minus, RotateCw, Square, Ticket, X } from 'lucide-react';
+import { Copy, Download, Minus, PanelLeft, RotateCw, Square, Ticket, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Kbd, KbdGroup } from '@/components/ui/kbd';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { resolveBindings } from '@/lib/commands';
+import { formatBinding } from '@/lib/keys';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useLayoutStore } from '@/stores/useLayoutStore';
 import { useUpdateStore } from '@/stores/useUpdateStore';
@@ -14,12 +17,17 @@ const NO_DRAG = { WebkitAppRegion: 'no-drag' } as React.CSSProperties;
 
 const RAIL = 48;
 
-const BUTTON = 'flex h-9 w-11 items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground';
+const BUTTON = 'flex h-8 w-11 items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground';
 
 export default function TitleBar() {
   const workspace = useAuthStore(s => s.workspaces.find(w => w.id === s.activeWorkspaceId)?.name ?? null);
   const navMode = useLayoutStore(s => s.navSidebar.mode);
   const navWidth = useLayoutStore(s => s.navSidebar.width);
+  const setNavSidebar = useLayoutStore(s => s.setNavSidebar);
+  const workspaceColor = useAuthStore(
+    s => s.workspaces.find(w => w.id === s.activeWorkspaceId)?.color ?? 'blue',
+  );
+  const binding = useAuthStore(s => resolveBindings(s.profile?.keys)['nav.toggle']);
   const [maximized, setMaximized] = useState(false);
 
   useEffect(() => {
@@ -27,19 +35,62 @@ export default function TitleBar() {
     return window.api.shell.onMaximized(setMaximized);
   }, []);
 
-  const iconColumn = navMode === 'expanded' ? navWidth : RAIL;
+  const expanded = navMode === 'expanded';
+
+  function toggleExpand() {
+    setNavSidebar({ mode: expanded ? 'retracted' : 'expanded' });
+  }
 
   return (
-    <>
-      <div style={DRAG} className="relative z-30 flex h-9 shrink-0 select-none items-center bg-background text-muted-foreground">
-        <span className="flex shrink-0 items-center justify-center" style={{ width: iconColumn }}>
+    <div style={DRAG} className="relative z-30 flex h-8 shrink-0 select-none items-stretch bg-sidebar text-muted-foreground">
+      <div
+        data-accent={workspaceColor}
+        className={`flex shrink-0 items-center gap-2 overflow-hidden pt-1 transition-[width] duration-200 ease-linear ${expanded ? 'pl-3 pr-2' : 'justify-center'}`}
+        style={{ width: expanded ? navWidth : RAIL }}
+      >
+        <div
+          className="flex size-6 shrink-0 items-center justify-center rounded-md"
+          style={{
+            color: 'var(--primary)',
+            background: 'color-mix(in oklab, var(--primary) 18%, transparent)',
+          }}
+        >
           <Ticket size={14} strokeWidth={1.6} />
-        </span>
-        <span className="min-w-0 flex-1 truncate text-xs">
+        </div>
+        {expanded && (
+          <>
+            <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-foreground">Issue Cards</span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  style={NO_DRAG}
+                  className="flex size-7 shrink-0 items-center justify-center rounded-md hover:bg-accent hover:text-foreground"
+                  onClick={toggleExpand}
+                  aria-label="Collapse sidebar"
+                >
+                  <PanelLeft size={15} strokeWidth={1.6} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="flex items-center gap-1.5">
+                Collapse
+                {binding && (
+                  <KbdGroup>
+                    {formatBinding(binding).map(key => (
+                      <Kbd key={key}>{key}</Kbd>
+                    ))}
+                  </KbdGroup>
+                )}
+              </TooltipContent>
+            </Tooltip>
+          </>
+        )}
+      </div>
+      <div className="flex min-w-0 flex-1 items-center">
+        <span className="min-w-0 flex-1 truncate px-3 text-xs">
           Issue Cards
           {workspace && <span className="text-muted-foreground/60"> | {workspace}</span>}
         </span>
-        <div style={NO_DRAG} className="flex shrink-0 items-center">
+        <div style={NO_DRAG} className="flex shrink-0 items-center self-stretch">
           <UpdateStatus />
           <button className={BUTTON} onClick={() => window.api.shell.minimize()} aria-label="Minimize">
             <Minus size={14} strokeWidth={1.6} />
@@ -60,8 +111,7 @@ export default function TitleBar() {
           </button>
         </div>
       </div>
-      <div className="relative z-30 h-px shrink-0 bg-border" />
-    </>
+    </div>
   );
 }
 

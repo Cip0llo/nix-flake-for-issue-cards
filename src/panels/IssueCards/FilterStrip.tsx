@@ -1,97 +1,150 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
+import { Boxes, CircleDot, Flag, Layers, TableProperties, Tag as TagIcon, Users } from 'lucide-react';
 
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import FilterBar, { type Facet, type FacetOption } from '@/components/shared/FilterBar';
+import UserAvatar from '@/components/shared/UserAvatar';
+import { countValues, toggleValue } from '@/lib/facets';
+import { metaRows, tagVar, type MetaKey } from '@/lib/tags';
+import { useAuthStore } from '@/stores/useAuthStore';
 import {
   PRIORITIES,
+  SHEET_AUTHOR,
   STATUS_FILTERS,
   hasRejection,
+  isFromSheet,
   useIssueStore,
-  type StatusFilter,
 } from '@/stores/useIssueStore';
-import type { IssueCard, IssuePriority } from '@/types';
-import { Dot, PRIORITY_COLOR, STATUS_COLOR } from './IssueBits';
-import MetaFilter from './MetaFilter';
-import PeopleFilter from './PeopleFilter';
-import TagFilter from './TagFilter';
+import type { IssueCard } from '@/types';
+import { PRIORITY_COLOR, STATUS_COLOR } from './IssueBits';
+import { useTagFacet } from './useTagFacet';
 
 interface FilterStripProps {
   cards: IssueCard[];
 }
 
+function metaOptions(cards: IssueCard[], key: MetaKey): FacetOption[] {
+  const rows = metaRows(cards, key);
+  const ordered = key === 'version' ? [...rows].reverse() : rows;
+  return ordered.map(row => ({ value: row.name, label: row.name, count: row.count, color: tagVar(row.color) }));
+}
+
 export default memo(function FilterStrip({ cards }: FilterStripProps) {
   const filters = useIssueStore(s => s.filters);
   const setFilter = useIssueStore(s => s.setFilter);
+  const toggleMeta = useIssueStore(s => s.toggleMeta);
+  const toggleAuthor = useIssueStore(s => s.toggleAuthor);
+  const clearFacets = useIssueStore(s => s.clearFacets);
+  const members = useAuthStore(s => s.members);
+  const tag = useTagFacet(cards);
 
-  const count = (fn: (c: IssueCard) => boolean) => cards.filter(fn).length;
-  const types = [...new Set(cards.map(c => c.type || 'Other'))].sort();
+  const facets = useMemo(() => {
+    const statusCounts = countValues(cards, c => (hasRejection(c) ? [c.status, 'rejected'] : [c.status]));
+    const priorityCounts = countValues(cards, c => [c.priority]);
+    const typeCounts = countValues(cards, c => [c.type || 'Other']);
+    const authorCounts = countValues(cards, c => [isFromSheet(c) ? SHEET_AUTHOR : (c.createdBy ?? 'nobody')]);
+
+    const people: FacetOption[] = members.map(member => ({
+      value: member.userId,
+      label: member.displayName,
+      count: authorCounts.get(member.userId) ?? 0,
+      lead: (
+        <UserAvatar
+          name={member.displayName}
+          initials={member.initials}
+          accent={member.accent}
+          url={member.avatarUrl}
+          className="size-5"
+        />
+      ),
+    }));
+    if ((authorCounts.get(SHEET_AUTHOR) ?? 0) > 0) {
+      people.push({
+        value: SHEET_AUTHOR,
+        label: 'From the bug sheet',
+        count: authorCounts.get(SHEET_AUTHOR),
+        lead: <TableProperties size={15} strokeWidth={1.6} className="text-muted-foreground" />,
+      });
+    }
+
+    const list: Facet[] = [
+      {
+        key: 'status',
+        label: 'Status',
+        icon: CircleDot,
+        options: STATUS_FILTERS.map(s => ({
+          value: s,
+          label: s,
+          count: statusCounts.get(s) ?? 0,
+          color: STATUS_COLOR[s],
+        })),
+        selected: filters.status,
+        onToggle: value => setFilter('status', toggleValue(filters.status, value as (typeof filters.status)[number])),
+        onClear: () => setFilter('status', []),
+      },
+      {
+        key: 'priority',
+        label: 'Priority',
+        icon: Flag,
+        options: PRIORITIES.map(p => ({
+          value: p,
+          label: p,
+          count: priorityCounts.get(p) ?? 0,
+          color: PRIORITY_COLOR[p],
+        })),
+        selected: filters.priority,
+        onToggle: value => setFilter('priority', toggleValue(filters.priority, value as (typeof filters.priority)[number])),
+        onClear: () => setFilter('priority', []),
+      },
+    ];
+
+    const types = [...typeCounts.keys()].sort();
+    if (types.length > 1) {
+      list.push({
+        key: 'type',
+        label: 'Type',
+        icon: Layers,
+        options: types.map(t => ({ value: t, label: t, count: typeCounts.get(t) })),
+        selected: filters.type,
+        onToggle: value => setFilter('type', toggleValue(filters.type, value)),
+        onClear: () => setFilter('type', []),
+      });
+    }
+
+    list.push(tag.facet);
+
+    for (const key of ['codebase', 'version'] as const) {
+      const options = metaOptions(cards, key);
+      if (options.length === 0) continue;
+      list.push({
+        key,
+        label: key === 'codebase' ? 'Codebase' : 'Version',
+        icon: key === 'codebase' ? Boxes : TagIcon,
+        options,
+        selected: filters[key],
+        onToggle: value => toggleMeta(key, value),
+        onClear: () => setFilter(key, []),
+      });
+    }
+
+    if (people.length > 1 || people.some(p => p.value === SHEET_AUTHOR)) {
+      list.push({
+        key: 'author',
+        label: 'People',
+        icon: Users,
+        options: people,
+        selected: filters.author,
+        onToggle: toggleAuthor,
+        onClear: () => setFilter('author', []),
+      });
+    }
+
+    return list;
+  }, [cards, filters, members, setFilter, toggleMeta, toggleAuthor, tag.facet]);
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b border-border px-[22px] py-2">
-      <ToggleGroup
-        type="multiple"
-        variant="outline"
-        size="sm"
-        value={filters.status}
-        onValueChange={v => setFilter('status', v as StatusFilter[])}
-        className="w-[500px] max-w-full shrink-0"
-      >
-        {STATUS_FILTERS.map(s => (
-          <ToggleGroupItem key={s} value={s} aria-label={s} className="min-w-0 flex-1 gap-1.5 px-2 text-[12px]">
-            <Dot color={STATUS_COLOR[s]} />
-            {s}
-            <span className="tnum text-[11px] text-muted-foreground">
-              {count(c => (s === 'rejected' ? hasRejection(c) : c.status === s))}
-            </span>
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
-
-      <ToggleGroup
-        type="multiple"
-        variant="outline"
-        size="sm"
-        value={filters.priority}
-        onValueChange={v => setFilter('priority', v as IssuePriority[])}
-      >
-        {PRIORITIES.map(p => (
-          <ToggleGroupItem key={p} value={p} aria-label={p} className="gap-1.5 text-[12px]">
-            <Dot color={PRIORITY_COLOR[p]} />
-            {p}
-            <span className="tnum text-[11px] text-muted-foreground">
-              {count(c => c.priority === p)}
-            </span>
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
-
-      <PeopleFilter cards={cards} />
-
-      <TagFilter cards={cards} />
-
-      <MetaFilter cards={cards} metaKey="codebase" />
-
-      <MetaFilter cards={cards} metaKey="version" />
-
-      {types.length > 1 && (
-        <>
-          <ToggleGroup
-            type="multiple"
-            variant="outline"
-            size="sm"
-            value={filters.type}
-            onValueChange={v => setFilter('type', v)}
-          >
-            {types.map(t => (
-              <ToggleGroupItem key={t} value={t} aria-label={t} className="gap-1.5 text-[12px]">
-                {t}
-                <span className="tnum text-[11px] text-muted-foreground">
-                  {count(c => (c.type || 'Other') === t)}
-                </span>
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </>
-      )}
-    </div>
+    <>
+      <FilterBar facets={facets} onClearAll={clearFacets} className="min-w-0 flex-1" />
+      {tag.dialog}
+    </>
   );
 });

@@ -5,13 +5,12 @@ import {
   Loader2,
   Plus,
   RotateCcw,
-  Rows3,
   Search,
   SearchX,
-  TableProperties,
 } from 'lucide-react';
 
 import PanelShell from '@/components/layout/PanelShell';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Empty,
@@ -24,18 +23,15 @@ import {
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuthStore, usePermissions } from '@/stores/useAuthStore';
 import { ORDERS, useIssueStore, visibleCards } from '@/stores/useIssueStore';
 import { useLayoutStore } from '@/stores/useLayoutStore';
 import { useUiStore } from '@/stores/useUiStore';
-import type { IssueCard, LayoutState } from '@/types';
+import type { IssueCard } from '@/types';
 import BulkBar from './BulkBar';
 import FilterStrip from './FilterStrip';
-import IssueBoard from './IssueBoard';
 import IssueDetailSheet from './IssueDetailSheet';
-import ImportSheetDialog from './ImportSheetDialog';
 import IssueFormDialog from './IssueFormDialog';
 import IssueTable from './IssueTable';
 import StatusDialogs from './StatusDialogs';
@@ -54,8 +50,6 @@ export default function IssueCardsPanel() {
   );
   const memberCount = useAuthStore(s => s.members.length);
   const can = usePermissions();
-  const view = useLayoutStore(s => s.issueView);
-  const setView = useLayoutStore(s => s.setIssueView);
   const order = useIssueStore(s => s.order);
   const setOrder = useIssueStore(s => s.setOrder);
 
@@ -74,7 +68,6 @@ export default function IssueCardsPanel() {
   const clearChecked = useIssueStore(s => s.clearChecked);
 
   const openForm = useUiStore(s => s.openIssueForm);
-  const openImport = useUiStore(s => s.openSheetImport);
 
   const restored = useRef<string | null>(null);
 
@@ -94,6 +87,7 @@ export default function IssueCardsPanel() {
   const editCard = useCallback((card: IssueCard) => openForm(card.id), [openForm]);
   const onEdit = can.writeCards ? editCard : undefined;
   const selected = cards.find(c => c.id === selectedId) ?? null;
+  const openCount = useMemo(() => cards.filter(c => c.status === 'open').length, [cards]);
   const checked = useMemo(() => {
     const wanted = new Set(checkedIds);
     return cards.filter(c => wanted.has(c.id));
@@ -101,6 +95,7 @@ export default function IssueCardsPanel() {
 
   const actions = (
     <>
+      <WorkspaceCrest />
       <Button variant="outline" size="sm" onClick={() => void load(true)}>
         {loading ? (
           <Loader2 size={15} strokeWidth={1.6} className="animate-spin" />
@@ -110,24 +105,18 @@ export default function IssueCardsPanel() {
         Refresh
       </Button>
       {can.writeCards && (
-        <>
-          <Button variant="outline" size="sm" onClick={openImport} disabled={!workspaceId}>
-            <TableProperties size={15} strokeWidth={1.6} />
-            Import from sheet
-          </Button>
-          <Button size="sm" onClick={() => openForm(null)} disabled={!workspaceId}>
-            <Plus size={15} strokeWidth={1.6} />
-            New card
-          </Button>
-        </>
+        <Button size="sm" onClick={() => openForm(null)} disabled={!workspaceId}>
+          <Plus size={15} strokeWidth={1.6} />
+          New card
+        </Button>
       )}
     </>
   );
 
   const topbar = (
     <>
-      <div className="flex flex-none items-center gap-2 overflow-hidden border-b border-border px-[22px] py-2">
-        <InputGroup className="w-[420px] min-w-[140px] max-w-full shrink">
+      <div className="flex flex-none flex-col gap-2 border-b border-border px-[22px] py-2">
+        <InputGroup className="h-8 w-full">
           <InputGroupAddon>
             <Search size={15} strokeWidth={1.6} />
           </InputGroupAddon>
@@ -138,61 +127,29 @@ export default function IssueCardsPanel() {
           />
         </InputGroup>
 
-        <ToggleGroup
-          type="single"
-          variant="outline"
-          size="sm"
-          value={order === 'column' ? '' : order}
-          onValueChange={v => v && setOrder(v as typeof order)}
-        >
-          {ORDERS.map(entry => (
-            <Tooltip key={entry.key}>
-              <TooltipTrigger asChild>
-                <ToggleGroupItem
-                  value={entry.key}
-                  aria-label={`order by ${entry.label}`}
-                  className="aria-checked:bg-accent aria-checked:text-accent-foreground"
-                >
-                  {entry.key === 'recent' && <ArrowDownWideNarrow size={15} strokeWidth={1.6} />}
-                  {entry.label}
-                </ToggleGroupItem>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">{entry.hint}</TooltipContent>
-            </Tooltip>
-          ))}
-        </ToggleGroup>
+        <div className="flex items-start gap-2">
+          {cards.length > 0 && <FilterStrip cards={cards} />}
 
-        <ToggleGroup
-          type="single"
-          variant="outline"
-          size="sm"
-          value={view}
-          onValueChange={v => v && setView(v as LayoutState['issueView'])}
-        >
-          <ToggleGroupItem value="table" aria-label="table view">
-            <Rows3 size={15} strokeWidth={1.6} />
-            Table
-          </ToggleGroupItem>
-          <ToggleGroupItem value="board" aria-label="board view">
-            <KanbanSquare size={15} strokeWidth={1.6} />
-            Board
-          </ToggleGroupItem>
-        </ToggleGroup>
-
-        <div className="ml-auto flex shrink-0 items-center gap-2">
-          <WorkspaceCrest />
-          <span className="tnum hidden whitespace-nowrap rounded-md border border-border px-2 py-1 text-[12px] text-muted-foreground md:inline-block">
-            <span className="lg:hidden">
-              {shown.length}/{cards.length}
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            <Select value={order === 'column' ? '' : order} onValueChange={v => setOrder(v as typeof order)}>
+              <SelectTrigger size="sm" aria-label="sort order" className="w-[124px] text-[12px]">
+                <ArrowDownWideNarrow size={15} strokeWidth={1.6} />
+                <SelectValue placeholder="Column" />
+              </SelectTrigger>
+              <SelectContent align="end">
+                {ORDERS.map(entry => (
+                  <SelectItem key={entry.key} value={entry.key} title={entry.hint}>
+                    {entry.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="tnum hidden whitespace-nowrap text-[12px] leading-8 text-muted-foreground md:inline-block">
+              {shown.length} of {cards.length}
             </span>
-            <span className="hidden lg:inline">
-              {shown.length} of {cards.length} shown
-            </span>
-          </span>
+          </div>
         </div>
       </div>
-
-      {cards.length > 0 && <FilterStrip cards={cards} />}
 
       {checked.length > 0 && <BulkBar checked={checked} shown={shown} />}
     </>
@@ -201,6 +158,7 @@ export default function IssueCardsPanel() {
   return (
     <PanelShell
       title="Issue Cards"
+      badge={<Badge variant="secondary" className="tnum">{openCount} open</Badge>}
       description={workspaceName ? `${workspaceName}, ${sharing(memberCount)}` : 'No workspace open'}
       actions={actions}
       topbar={topbar}
@@ -228,16 +186,10 @@ export default function IssueCardsPanel() {
           </EmptyHeader>
           <EmptyContent>
             {can.writeCards && (
-              <>
-                <Button size="sm" onClick={() => openForm(null)} disabled={!workspaceId}>
-                  <Plus size={15} strokeWidth={1.6} />
-                  New card
-                </Button>
-                <Button variant="outline" size="sm" onClick={openImport} disabled={!workspaceId}>
-                  <TableProperties size={15} strokeWidth={1.6} />
-                  Import from sheet
-                </Button>
-              </>
+              <Button size="sm" onClick={() => openForm(null)} disabled={!workspaceId}>
+                <Plus size={15} strokeWidth={1.6} />
+                New card
+              </Button>
             )}
           </EmptyContent>
         </Empty>
@@ -260,17 +212,12 @@ export default function IssueCardsPanel() {
         </Empty>
       ) : (
         <ScrollArea className="h-full">
-          {view === 'table' ? (
-            <IssueTable cards={shown} onEdit={onEdit} />
-          ) : (
-            <IssueBoard cards={shown} onEdit={onEdit} />
-          )}
+          <IssueTable cards={shown} onEdit={onEdit} />
         </ScrollArea>
       )}
 
       <IssueDetailSheet card={selected} onEdit={editCard} />
       <IssueFormDialog />
-      <ImportSheetDialog />
       <StatusDialogs />
     </PanelShell>
   );

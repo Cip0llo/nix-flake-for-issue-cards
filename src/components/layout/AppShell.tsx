@@ -19,8 +19,10 @@ export default function AppShell() {
     >
       <NavSidebar expanded={navExpanded} />
 
-      <SidebarInset className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <PanelHost />
+      <SidebarInset className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-sidebar">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-tl-[calc(var(--radius)*2)] border-l border-t border-border bg-background">
+          <PanelHost />
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );

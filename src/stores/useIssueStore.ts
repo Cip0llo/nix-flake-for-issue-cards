@@ -23,6 +23,7 @@ import {
   notifyCardStatus,
   notifyRejection,
 } from '@/lib/notifyEvents';
+import { matchesAny, toggleValue } from '@/lib/facets';
 import { batcher, changed, readCache, writeCache, type Change } from '@/lib/liveRefresh';
 import { errorText, supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -161,6 +162,7 @@ interface IssueStore {
   toggleMeta: (key: 'codebase' | 'version', value: string) => void;
   toggleAuthor: (userId: string) => void;
   clearFilters: () => void;
+  clearFacets: () => void;
   setOrder: (order: OrderKey) => void;
   setSort: (key: SortKey) => void;
 
@@ -245,6 +247,11 @@ function attachmentIn(card: IssueCard, id: string): boolean {
 
 export const useIssueStore = create<IssueStore>((set, get) => {
   const startView = loadView();
+  const flip = (key: 'tag' | 'codebase' | 'version' | 'author', value: string) => {
+    set(s => ({ filters: { ...s.filters, [key]: toggleValue(s.filters[key], value) } }));
+    keepView();
+  };
+
   const keepView = () => {
     const { filters, order, sortKey, sortDir, query } = get();
     saveView({ filters, order, sortKey, sortDir, query });
@@ -408,50 +415,17 @@ export const useIssueStore = create<IssueStore>((set, get) => {
       keepView();
     },
 
-    toggleTag: tag => {
-      set(s => {
-        const on = s.filters.tag.some(t => t.toLowerCase() === tag.toLowerCase());
-        return {
-          filters: {
-            ...s.filters,
-            tag: on
-              ? s.filters.tag.filter(t => t.toLowerCase() !== tag.toLowerCase())
-              : [...s.filters.tag, tag],
-          },
-        };
-      });
-      keepView();
-    },
-
-    toggleMeta: (key, value) => {
-      set(s => {
-        const on = s.filters[key].some(v => v.toLowerCase() === value.toLowerCase());
-        return {
-          filters: {
-            ...s.filters,
-            [key]: on
-              ? s.filters[key].filter(v => v.toLowerCase() !== value.toLowerCase())
-              : [...s.filters[key], value],
-          },
-        };
-      });
-      keepView();
-    },
-
-    toggleAuthor: userId => {
-      set(s => ({
-        filters: {
-          ...s.filters,
-          author: s.filters.author.includes(userId)
-            ? s.filters.author.filter(id => id !== userId)
-            : [...s.filters.author, userId],
-        },
-      }));
-      keepView();
-    },
+    toggleTag: tag => flip('tag', tag),
+    toggleMeta: (key, value) => flip(key, value),
+    toggleAuthor: userId => flip('author', userId),
 
     clearFilters: () => {
       set({ filters: NO_FILTERS, query: '' });
+      keepView();
+    },
+
+    clearFacets: () => {
+      set({ filters: NO_FILTERS });
       keepView();
     },
 
@@ -684,26 +658,13 @@ export function visibleCards(state: ListView): IssueCard[] {
   const { cards, filters, query, order, sortKey, sortDir } = state;
 
   const kept = cards.filter(c => {
-    if (filters.status.length) {
-      const ok = filters.status.some(f => (f === 'rejected' ? hasRejection(c) : f === c.status));
-      if (!ok) return false;
-    }
-    if (filters.priority.length && !filters.priority.includes(c.priority)) return false;
-    if (filters.type.length && !filters.type.includes(c.type || 'Other')) return false;
-    if (filters.codebase.length && !filters.codebase.some(v => v.toLowerCase() === c.codebase.toLowerCase())) {
-      return false;
-    }
-    if (filters.version.length && !filters.version.some(v => v.toLowerCase() === c.version.toLowerCase())) {
-      return false;
-    }
-    if (filters.author.length) {
-      const who = isFromSheet(c) ? SHEET_AUTHOR : (c.createdBy ?? 'nobody');
-      if (!filters.author.includes(who)) return false;
-    }
-    if (filters.tag.length) {
-      const own = c.tags.map(t => t.toLowerCase());
-      if (!filters.tag.some(t => own.includes(t.toLowerCase()))) return false;
-    }
+    if (!matchesAny(filters.status, hasRejection(c) ? [c.status, 'rejected'] : [c.status])) return false;
+    if (!matchesAny(filters.priority, [c.priority])) return false;
+    if (!matchesAny(filters.type, [c.type || 'Other'])) return false;
+    if (!matchesAny(filters.codebase, [c.codebase])) return false;
+    if (!matchesAny(filters.version, [c.version])) return false;
+    if (!matchesAny(filters.author, [isFromSheet(c) ? SHEET_AUTHOR : (c.createdBy ?? 'nobody')])) return false;
+    if (!matchesAny(filters.tag, c.tags)) return false;
     return matchesQuery(c, query);
   });
 

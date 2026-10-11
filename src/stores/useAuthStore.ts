@@ -17,7 +17,6 @@ import type {
 export const SETTINGS_DEFAULTS = {
   theme: 'oled' as ThemeChoice,
   accent: 'blue',
-  density: 'normal' as 'normal' | 'compact',
   radius: '0.5rem',
   monoUi: false,
 };
@@ -29,7 +28,6 @@ interface ProfileRow {
   initials: string;
   accent: string;
   theme: string;
-  density: string;
   radius: string;
   mono_ui: boolean;
   avatar_url?: string | null;
@@ -69,7 +67,6 @@ function toProfile(row: ProfileRow): UserProfile {
     initials: row.initials,
     accent: row.accent || SETTINGS_DEFAULTS.accent,
     theme: (row.theme || SETTINGS_DEFAULTS.theme) as ThemeChoice,
-    density: (row.density || SETTINGS_DEFAULTS.density) as 'normal' | 'compact',
     radius: row.radius || SETTINGS_DEFAULTS.radius,
     monoUi: row.mono_ui,
     avatarUrl: row.avatar_url ?? '',
@@ -89,7 +86,6 @@ const COLUMN: Record<keyof ProfilePatch, string> = {
   initials: 'initials',
   accent: 'accent',
   theme: 'theme',
-  density: 'density',
   radius: 'radius',
   monoUi: 'mono_ui',
   avatarUrl: 'avatar_url',

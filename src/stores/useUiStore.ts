@@ -7,9 +7,6 @@ interface UiStore {
   editingId: string | null;
   openIssueForm: (cardId: string | null) => void;
   closeIssueForm: () => void;
-  sheetImportOpen: boolean;
-  openSheetImport: () => void;
-  closeSheetImport: () => void;
   testFormOpen: boolean;
   editingFeatureId: string | null;
   openTestForm: (featureId: string | null) => void;
@@ -35,9 +32,6 @@ export const useUiStore = create<UiStore>(set => ({
   editingId: null,
   openIssueForm: cardId => set({ issueFormOpen: true, editingId: cardId }),
   closeIssueForm: () => set({ issueFormOpen: false, editingId: null }),
-  sheetImportOpen: false,
-  openSheetImport: () => set({ sheetImportOpen: true }),
-  closeSheetImport: () => set({ sheetImportOpen: false }),
   testFormOpen: false,
   editingFeatureId: null,
   openTestForm: featureId => set({ testFormOpen: true, editingFeatureId: featureId }),

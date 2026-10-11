@@ -73,8 +73,8 @@ export default function TestingPanel() {
 
   const topbar = (
     <>
-      <div className="flex flex-none items-center gap-2 overflow-hidden border-b border-border px-[22px] py-2">
-        <InputGroup className="w-[420px] min-w-[140px] max-w-full shrink">
+      <div className="flex flex-none flex-col gap-2 border-b border-border px-[22px] py-2">
+        <InputGroup className="h-8 w-full">
           <InputGroupAddon>
             <Search size={15} strokeWidth={1.6} />
           </InputGroupAddon>
@@ -85,12 +85,14 @@ export default function TestingPanel() {
           />
         </InputGroup>
 
-        <span className="tnum ml-auto hidden whitespace-nowrap rounded-md border border-border px-2 py-1 text-[12px] text-muted-foreground md:inline-block">
-          {shown.length} of {features.length} shown
-        </span>
-      </div>
+        <div className="flex items-start gap-2">
+          {features.length > 0 && <TestFilterStrip features={features} />}
 
-      {features.length > 0 && <TestFilterStrip features={features} />}
+          <span className="tnum ml-auto hidden shrink-0 whitespace-nowrap text-[12px] leading-8 text-muted-foreground md:inline-block">
+            {shown.length} of {features.length}
+          </span>
+        </div>
+      </div>
     </>
   );
 

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Check, Circle, Copy, LogOut, Pencil, Sparkles, SquareDashed } from 'lucide-react';
+import { useMemo, useState, type ReactNode } from 'react';
+import { Check, Circle, Copy, LogOut, Pencil, Search, Sparkles, SquareDashed } from 'lucide-react';
 import { toast } from 'sonner';
 
 import PanelShell from '@/components/layout/PanelShell';
@@ -11,7 +11,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { ItemGroup, ItemSeparator } from '@/components/ui/item';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Select,
   SelectContent,
@@ -23,6 +25,7 @@ import { Switch } from '@/components/ui/switch';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { isHexColor } from '@/lib/accents';
+import { CUSTOM_FIELDS, DEFAULT_CUSTOM, THEME_LIST } from '@/lib/themes';
 import {
   clearConnection,
   connection,
@@ -33,9 +36,11 @@ import {
   supabase,
 } from '@/lib/supabase';
 import { ROLE_LABEL } from '@/lib/permissions';
+import { cn } from '@/lib/utils';
 import { useAuthStore, usePermissions } from '@/stores/useAuthStore';
+import { useLayoutStore } from '@/stores/useLayoutStore';
 import { useUiStore } from '@/stores/useUiStore';
-import type { AvatarBorder } from '@/types';
+import type { AvatarBorder, SettingsSection, ThemeChoice } from '@/types';
 import IdentityCard from './IdentityCard';
 import KeystrokesCard from './KeystrokesCard';
 import NotificationsCard from './NotificationsCard';
@@ -43,12 +48,12 @@ import PeopleCard from './PeopleCard';
 import PictureDialog from './PictureDialog';
 import SettingRow from './SettingRow';
 import UpdateCard from './UpdateCard';
+import { SETTINGS_SECTIONS } from './sections';
 
-const THEMES = [
-  { value: 'system', label: 'Follow the system' },
-  { value: 'oled', label: 'OLED' },
-  { value: 'dark', label: 'Dark' },
-  { value: 'light', label: 'Light' },
+const THEMES: { value: ThemeChoice; label: string }[] = [
+  { value: 'system', label: 'System' },
+  ...THEME_LIST.map(theme => ({ value: theme.id, label: theme.label })),
+  { value: 'custom', label: 'Custom' },
 ];
 
 const RADII = [
@@ -61,6 +66,9 @@ const RADII = [
 function AppearanceCard() {
   const profile = useAuthStore(s => s.profile)!;
   const updateProfile = useAuthStore(s => s.updateProfile);
+  const custom = useLayoutStore(s => s.customTheme);
+  const setCustomTheme = useLayoutStore(s => s.setCustomTheme);
+  const themed = profile.theme === 'custom';
 
   function patch(next: Parameters<typeof updateProfile>[0]) {
     void updateProfile(next).catch(err => toast.error(errorText(err)));
@@ -74,20 +82,60 @@ function AppearanceCard() {
       <CardContent className="px-0">
         <ItemGroup>
           <SettingRow title="Theme" description="Every color in the app comes from this">
-            {THEMES.map(theme => (
-              <ThemeCard
-                key={theme.value}
-                id={theme.value}
-                label={theme.label}
-                active={profile.theme === theme.value}
-                onClick={() => patch({ theme: theme.value as never })}
-              />
-            ))}
+            <div className="grid grid-cols-5 gap-2">
+              {THEMES.map(theme => (
+                <ThemeCard
+                  key={theme.value}
+                  id={theme.value}
+                  label={theme.label}
+                  active={profile.theme === theme.value}
+                  onClick={() => patch({ theme: theme.value })}
+                />
+              ))}
+            </div>
           </SettingRow>
 
+          {themed && (
+            <>
+              <ItemSeparator />
+              <SettingRow
+                title="Custom colors"
+                description="Background, surface and text set the mood, primary and secondary color the buttons"
+              >
+                <div className="flex flex-wrap items-center justify-end gap-x-5 gap-y-2">
+                  {CUSTOM_FIELDS.map(field => (
+                    <div key={field.key} className="flex items-center gap-2">
+                      <span className="text-[12px] text-muted-foreground">{field.label}</span>
+                      <ColorPicker
+                        label={field.label}
+                        value={custom[field.key]}
+                        active
+                        onChange={hex => setCustomTheme({ [field.key]: hex })}
+                      />
+                    </div>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={() => setCustomTheme(DEFAULT_CUSTOM)}>
+                    Reset
+                  </Button>
+                </div>
+              </SettingRow>
+            </>
+          )}
+
           <ItemSeparator />
-          <SettingRow title="Accent" description="Buttons, focus rings and the active panel">
-            <div className="flex max-w-[340px] flex-wrap items-center justify-end gap-1.5">
+          <SettingRow
+            title="Accent"
+            description={
+              themed
+                ? 'The custom theme sets the primary color, change it under Custom colors'
+                : 'Buttons, focus rings and the active panel'
+            }
+          >
+            <div
+              className={`flex max-w-[340px] flex-wrap items-center justify-end gap-1.5 ${
+                themed ? 'pointer-events-none opacity-40' : ''
+              }`}
+            >
               <ColorSwatches
                 label="accent"
                 value={profile.accent}
@@ -100,19 +148,6 @@ function AppearanceCard() {
                 onChange={accent => patch({ accent })}
               />
             </div>
-          </SettingRow>
-
-          <ItemSeparator />
-          <SettingRow title="Density" description="How tight the rows and cards sit" htmlFor="density">
-            <Select value={profile.density} onValueChange={value => patch({ density: value as never })}>
-              <SelectTrigger id="density" className="w-[190px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="normal">Normal</SelectItem>
-                <SelectItem value="compact">Compact</SelectItem>
-              </SelectContent>
-            </Select>
           </SettingRow>
 
           <ItemSeparator />
@@ -160,7 +195,7 @@ function ThemeCard({ id, label, active, onClick }: ThemeCardProps) {
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`w-[92px] cursor-pointer rounded-md border p-2 transition-colors duration-150 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none ${
+      className={`w-[88px] cursor-pointer rounded-md border p-2 transition-colors duration-150 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none ${
         active ? 'border-primary ring-[3px] ring-ring/30' : 'border-border hover:border-foreground/30'
       }`}
     >
@@ -172,7 +207,7 @@ function ThemeCard({ id, label, active, onClick }: ThemeCardProps) {
       ) : (
         <ThemePreview theme={id} className="h-9 rounded-sm border" />
       )}
-      <div className={`mt-1.5 text-center text-[11px] ${active ? '' : 'text-muted-foreground'}`}>
+      <div className={`mt-1.5 truncate text-center text-[11px] ${active ? '' : 'text-muted-foreground'}`}>
         {label}
       </div>
     </button>
@@ -193,31 +228,131 @@ function ThemePreview({ theme, className }: { theme: string; className?: string 
   );
 }
 
+function Section({ show, children }: { show: boolean; children: ReactNode }) {
+  return show ? <>{children}</> : null;
+}
+
 export default function SettingsPanel() {
   const profile = useAuthStore(s => s.profile);
-  const signOut = useAuthStore(s => s.signOut);
+  const section = useLayoutStore(s => s.settingsSection);
+  const setSection = useLayoutStore(s => s.setSettingsSection);
+  const [query, setQuery] = useState('');
+
+  const needle = query.trim().toLowerCase();
+  const matches = useMemo(() => {
+    if (!needle) return [];
+    return SETTINGS_SECTIONS.flatMap(info => {
+      const own = `${info.label} ${info.hint}`.toLowerCase().includes(needle);
+      const rows = info.rows.filter(row => row.toLowerCase().includes(needle));
+      return [
+        ...(own ? [{ key: info.id, title: info.label, where: 'Section', id: info.id }] : []),
+        ...rows.map(row => ({ key: `${info.id}:${row}`, title: row, where: info.label, id: info.id })),
+      ];
+    });
+  }, [needle]);
+
+  function jump(id: SettingsSection) {
+    setSection(id);
+    setQuery('');
+  }
 
   if (!profile) return null;
 
-  return (
-    <PanelShell title="Settings" description="This account, its workspaces, and how the app looks">
-      <div className="flex flex-col gap-6 pb-10">
-        <AccountCard />
-        <AppearanceCard />
-        <WorkspaceCard />
-        <PeopleCard />
-        <IdentityCard />
-        <NotificationsCard />
-        <KeystrokesCard />
-        <UpdateCard />
-        <ConnectionCard />
+  const current = SETTINGS_SECTIONS.find(info => info.id === section) ?? SETTINGS_SECTIONS[0];
 
-        <div className="flex justify-end">
-          <Button variant="outline" onClick={() => void signOut()}>
-            <LogOut size={15} strokeWidth={1.6} />
-            Sign out
-          </Button>
-        </div>
+  return (
+    <PanelShell title="Settings" description={current.hint} scroll={false} width={0}>
+      <div className="grid h-full min-h-0 grid-cols-[216px_minmax(0,1fr)] border-t border-border">
+        <aside className="flex min-h-0 flex-col border-r border-border">
+          <div className="p-3">
+            <InputGroup className="h-8">
+              <InputGroupAddon>
+                <Search size={15} strokeWidth={1.6} />
+              </InputGroupAddon>
+              <InputGroupInput
+                aria-label="Search settings"
+                placeholder="Search settings"
+                value={query}
+                onChange={event => setQuery(event.target.value)}
+                onKeyDown={event => {
+                  if (event.key === 'Enter' && matches[0]) jump(matches[0].id);
+                  if (event.key === 'Escape') setQuery('');
+                }}
+              />
+            </InputGroup>
+          </div>
+
+          <ScrollArea className="min-h-0 flex-1">
+            <div className="flex flex-col gap-0.5 px-2 pb-3">
+              {needle ? (
+                matches.length === 0 ? (
+                  <p className="px-2 py-3 text-[12px] text-muted-foreground">No setting matches that.</p>
+                ) : (
+                  matches.map(match => (
+                    <Button
+                      key={match.key}
+                      variant="ghost"
+                      className="h-auto flex-col items-start gap-0 px-2 py-1.5 text-left"
+                      onClick={() => jump(match.id)}
+                    >
+                      <span className="text-[13px]">{match.title}</span>
+                      <span className="text-[11px] font-normal text-muted-foreground">{match.where}</span>
+                    </Button>
+                  ))
+                )
+              ) : (
+                SETTINGS_SECTIONS.map(info => {
+                  const Icon = info.icon;
+                  const active = info.id === current.id;
+                  return (
+                    <Button
+                      key={info.id}
+                      variant="ghost"
+                      aria-current={active ? 'page' : undefined}
+                      className={cn(
+                        'h-8 justify-start gap-2.5 px-2 text-[13px] font-normal',
+                        active && 'bg-accent font-medium text-accent-foreground',
+                      )}
+                      onClick={() => setSection(info.id)}
+                    >
+                      <Icon size={15} strokeWidth={1.6} />
+                      {info.label}
+                    </Button>
+                  );
+                })
+              )}
+            </div>
+          </ScrollArea>
+        </aside>
+
+        <ScrollArea className="min-h-0 min-w-0">
+          <div className="flex w-full flex-col gap-6 px-[22px] pb-10 pt-5">
+            <Section show={current.id === 'account'}>
+              <AccountCard />
+              <SignInCard />
+            </Section>
+            <Section show={current.id === 'appearance'}>
+              <AppearanceCard />
+              <IdentityCard />
+            </Section>
+            <Section show={current.id === 'workspace'}>
+              <WorkspaceCard />
+              <PeopleCard />
+            </Section>
+            <Section show={current.id === 'notifications'}>
+              <NotificationsCard />
+            </Section>
+            <Section show={current.id === 'keystrokes'}>
+              <KeystrokesCard />
+            </Section>
+            <Section show={current.id === 'updates'}>
+              <UpdateCard />
+            </Section>
+            <Section show={current.id === 'connection'}>
+              <ConnectionCard />
+            </Section>
+          </div>
+        </ScrollArea>
       </div>
     </PanelShell>
   );
@@ -238,7 +373,6 @@ function AccountCard() {
   const [name, setName] = useState(profile.displayName);
   const [initials, setInitials] = useState(profile.initials);
   const [bio, setBio] = useState(profile.bio);
-  const [password, setPassword] = useState('');
 
   const pictureOpen = useUiStore(s => s.pictureOpen);
   const pictureKind = useUiStore(s => s.pictureKind);
@@ -261,26 +395,9 @@ function AccountCard() {
     }
   }
 
-  async function savePassword() {
-    if (password.length < 8) {
-      toast.error('Use at least 8 characters');
-      return;
-    }
-    const { error } = await supabase().auth.updateUser({ password });
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    setPassword('');
-    toast.success('Password changed');
-  }
-
   return (
     <>
     <Card className="gap-0 overflow-hidden py-0">
-      <CardHeader className="border-b py-4">
-        <CardTitle className="text-[13px]">Account</CardTitle>
-      </CardHeader>
       <CardContent className="px-0">
         <div className="border-b border-border">
           <button
@@ -349,11 +466,6 @@ function AccountCard() {
         </div>
 
         <ItemGroup>
-          <SettingRow title="Signed in as" description="The address this account signs in with">
-            <span className="text-[12.5px] text-muted-foreground">{profile.email}</span>
-          </SettingRow>
-
-          <ItemSeparator />
           <SettingRow title="Display name" description="What the other people in a workspace see">
             <Input className="w-[220px]" value={name} onChange={e => setName(e.target.value)} />
             <Input
@@ -410,6 +522,48 @@ function AccountCard() {
               </ToggleGroupItem>
             </ToggleGroup>
           </SettingRow>
+        </ItemGroup>
+      </CardContent>
+    </Card>
+
+    <PictureDialog
+      open={pictureOpen}
+      kind={pictureKind}
+      onOpenChange={open => (open ? openPicture(pictureKind) : closePicture())}
+    />
+    </>
+  );
+}
+
+function SignInCard() {
+  const email = useAuthStore(s => s.profile?.email ?? '');
+  const signOut = useAuthStore(s => s.signOut);
+  const [password, setPassword] = useState('');
+
+  async function savePassword() {
+    if (password.length < 8) {
+      toast.error('Use at least 8 characters');
+      return;
+    }
+    const { error } = await supabase().auth.updateUser({ password });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setPassword('');
+    toast.success('Password changed');
+  }
+
+  return (
+    <Card className="gap-0 overflow-hidden py-0">
+      <CardHeader className="border-b py-4">
+        <CardTitle className="text-[13px]">Sign in</CardTitle>
+      </CardHeader>
+      <CardContent className="px-0">
+        <ItemGroup>
+          <SettingRow title="Signed in as" description="The address this account signs in with">
+            <span className="text-[12.5px] text-muted-foreground">{email}</span>
+          </SettingRow>
 
           <ItemSeparator />
           <SettingRow title="Password" description="Change the password on this account">
@@ -421,19 +575,19 @@ function AccountCard() {
               value={password}
               onChange={e => setPassword(e.target.value)}
             />
-            <WhyDisabled reason={password ? null : 'Type a new password first'} className="max-w-[200px] text-right" />
             <Button size="sm" onClick={() => void savePassword()} disabled={!password}>Change</Button>
+          </SettingRow>
+
+          <ItemSeparator />
+          <SettingRow title="Sign out" description="End the session on this device">
+            <Button variant="outline" size="sm" onClick={() => void signOut()}>
+              <LogOut size={15} strokeWidth={1.6} />
+              Sign out
+            </Button>
           </SettingRow>
         </ItemGroup>
       </CardContent>
     </Card>
-
-    <PictureDialog
-      open={pictureOpen}
-      kind={pictureKind}
-      onOpenChange={open => (open ? openPicture(pictureKind) : closePicture())}
-    />
-    </>
   );
 }
 

@@ -13,7 +13,6 @@ import {
   Settings,
   SquareCheck,
   SquareDashed,
-  TableProperties,
   Trophy,
   Undo2,
   User,
@@ -91,18 +90,6 @@ export const APP_COMMANDS: AppCommand[] = [
       if (!canWrite()) return;
       useLayoutStore.getState().setActivePanel('issue-cards');
       useUiStore.getState().openIssueForm(null);
-    },
-  },
-  {
-    id: 'issues.importSheet',
-    label: 'Import issues from sheet',
-    hint: 'Paste bug sheet rows, or open a .tsv export',
-    icon: TableProperties,
-    defaultKey: '',
-    run: () => {
-      if (!canWrite()) return;
-      useLayoutStore.getState().setActivePanel('issue-cards');
-      useUiStore.getState().openSheetImport();
     },
   },
   {

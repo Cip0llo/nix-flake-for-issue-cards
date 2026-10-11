@@ -7,7 +7,7 @@ declare global {
     api: {
       shell: {
         setTitle: (title: string) => void;
-        setTheme: (theme: string) => void;
+        setTheme: (theme: string, background: string, dark: boolean) => void;
         openExternal: (url: string) => void;
         minimize: () => void;
         toggleMaximize: () => void;

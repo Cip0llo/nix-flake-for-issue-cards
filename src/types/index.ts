@@ -1,4 +1,15 @@
+import type { CustomTheme } from '@/lib/themes';
+
 export type PanelId = 'issue-cards' | 'testing' | 'leaderboard' | 'settings';
+
+export type SettingsSection =
+  | 'account'
+  | 'appearance'
+  | 'workspace'
+  | 'notifications'
+  | 'keystrokes'
+  | 'updates'
+  | 'connection';
 
 export interface SidebarState {
   mode: 'retracted' | 'expanded';
@@ -17,12 +28,22 @@ export interface LayoutState {
   navSidebar: SidebarState;
   lastSelectedIssueId: string | null;
   issueColumnWidths: Record<string, number>;
-  issueView: 'board' | 'table';
   issueSheetWidth: number;
+  settingsSection: SettingsSection;
+  customTheme: CustomTheme;
   identity: IdentityPrefs;
 }
 
-export type ThemeChoice = 'system' | 'oled' | 'dark' | 'light';
+export type ThemeChoice =
+  | 'system'
+  | 'oled'
+  | 'dark'
+  | 'light'
+  | 'midnight'
+  | 'forest'
+  | 'mocha'
+  | 'sand'
+  | 'custom';
 
 export type AvatarBorder = 'none' | 'glow' | 'ring';
 
@@ -33,7 +54,6 @@ export interface UserProfile {
   initials: string;
   accent: string;
   theme: ThemeChoice;
-  density: 'normal' | 'compact';
   radius: string;
   monoUi: boolean;
   avatarUrl: string;

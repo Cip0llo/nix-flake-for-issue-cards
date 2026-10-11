@@ -24,6 +24,7 @@ import {
   syncFeatures,
 } from '@/lib/tests';
 import { notifyAnswer, notifyFeatureSaved, notifyRetest, notifyTestNote } from '@/lib/notifyEvents';
+import { matchesAny, toggleValue } from '@/lib/facets';
 import { batcher, changed, readCache, writeCache, type Change } from '@/lib/liveRefresh';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -86,6 +87,7 @@ interface TestStore {
   setQuery: (query: string) => void;
   setFilter: <K extends keyof TestFilters>(key: K, value: TestFilters[K]) => void;
   togglePerson: (userId: string) => void;
+  toggleVersion: (version: string) => void;
   clearFilters: () => void;
   setSort: (key: TestSortKey) => void;
   select: (id: string | null) => void;
@@ -339,14 +341,9 @@ export const useTestStore = create<TestStore>((set, get) => {
     setQuery: query => set({ query }),
     setFilter: (key, value) => set(s => ({ filters: { ...s.filters, [key]: value } })),
     togglePerson: userId =>
-      set(s => ({
-        filters: {
-          ...s.filters,
-          person: s.filters.person.includes(userId)
-            ? s.filters.person.filter(p => p !== userId)
-            : [...s.filters.person, userId],
-        },
-      })),
+      set(s => ({ filters: { ...s.filters, person: toggleValue(s.filters.person, userId) } })),
+    toggleVersion: version =>
+      set(s => ({ filters: { ...s.filters, version: toggleValue(s.filters.version, version) } })),
     clearFilters: () => set({ filters: EMPTY_TEST_FILTERS, query: '' }),
     setSort: key =>
       set(s => ({ sortKey: key, sortDir: s.sortKey === key ? (s.sortDir === 1 ? -1 : 1) : 1 })),
@@ -470,8 +467,8 @@ export function visibleFeatures(view: View): TestFeature[] {
     if (filters.status.length === 0 ? f.archived : !filters.status.some(s => matchesStatus(f, s, myId))) {
       return false;
     }
-    if (filters.version.length && !filters.version.includes(f.version)) return false;
-    if (filters.person.length && !(f.createdBy && filters.person.includes(f.createdBy))) return false;
+    if (!matchesAny(filters.version, [f.version])) return false;
+    if (!matchesAny(filters.person, [f.createdBy ?? 'nobody'])) return false;
     return matchesQuery(f, query);
   });
 

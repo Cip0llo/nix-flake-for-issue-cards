@@ -45,14 +45,14 @@ export default function FeatureTable({ features }: { features: TestFeature[] }) 
   }, [notes]);
 
   return (
-    <Table className="table-fixed text-[13px]">
+    <Table containerClassName="overflow-visible" className="table-fixed text-[13px]">
       <TableHeader>
         <TableRow>
           {COLUMNS.map(({ key, label, className }) => (
             <TableHead
               key={label}
               onClick={key ? () => setSort(key) : undefined}
-              className={`sticky top-0 z-10 bg-card text-[11px] font-normal uppercase tracking-wide text-muted-foreground/70 ${
+              className={`sticky top-0 z-10 bg-card shadow-[inset_0_-1px_0_var(--border)] text-[11px] font-normal uppercase tracking-wide text-muted-foreground/70 ${
                 key ? 'cursor-pointer hover:text-foreground' : ''
               } ${className}`}
             >

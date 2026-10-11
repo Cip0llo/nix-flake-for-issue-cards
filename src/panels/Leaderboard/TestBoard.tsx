@@ -29,6 +29,7 @@ import {
 } from '@/lib/leaderboard';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useTestStore } from '@/stores/useTestStore';
+import { HEAD_CLASS } from './boardStyles';
 
 const COLUMNS: { key: TestRankKey; label: string; note: string }[] = [
   { key: 'written', label: 'Written', note: `test lists they wrote, worth ${TEST_WEIGHTS.written} each` },
@@ -52,11 +53,11 @@ export default function TestBoard({ range }: { range: Range }) {
   const heads = [...COLUMNS, { key: 'score' as const, label: 'Score', note: 'Everything above, with the weights applied' }];
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Who tested</CardTitle>
+    <Card className="gap-0 overflow-hidden py-0">
+      <CardHeader className="border-b py-4">
+        <CardTitle className="text-[13px]">Who tested</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-0">
         {rows.length === 0 ? (
           <Empty>
             <EmptyHeader>
@@ -73,12 +74,12 @@ export default function TestBoard({ range }: { range: Range }) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[40px]" />
-                <TableHead>Person</TableHead>
+                <TableHead className="w-[56px] pl-5" />
+                <TableHead className={HEAD_CLASS}>Person</TableHead>
                 {heads.map(column => (
                   <TableHead
                     key={column.key}
-                    className={column.key === 'score' ? 'w-[180px] text-right' : 'text-right'}
+                    className={`${HEAD_CLASS} text-right ${column.key === 'score' ? 'w-[180px] pr-5' : ''}`}
                   >
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -112,7 +113,7 @@ export default function TestBoard({ range }: { range: Range }) {
             <TableBody>
               {rows.map((row, index) => (
                 <TableRow key={row.userId}>
-                  <TableCell>
+                  <TableCell className="pl-5">
                     {index < 3 ? (
                       <Medal size={15} strokeWidth={1.6} style={{ color: PLACE_COLOR[index] }} />
                     ) : (
@@ -134,7 +135,7 @@ export default function TestBoard({ range }: { range: Range }) {
                       </span>
                     </TableCell>
                   ))}
-                  <TableCell className="text-right">
+                  <TableCell className="pr-5 text-right">
                     <span className="flex items-center justify-end gap-2">
                       <span className="h-1.5 w-[90px] overflow-hidden rounded-full bg-muted">
                         <span
