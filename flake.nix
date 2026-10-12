@@ -44,7 +44,7 @@
 
           cat > $out/bin/issue-cards <<EOF
             #!${pkgs.runtimeShell}
-            exec ${pkgs.electron}/bin/electron $out/lib/issue-cards/dist/electron/main.js "\$@"
+            exec ${pkgs.electron}/bin/electron $out/lib/issue-cards "\$@"
           EOF
 
           chmod 755 $out/bin/issue-cards
