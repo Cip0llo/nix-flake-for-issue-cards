@@ -29,6 +29,17 @@
         buildInputs = [ pkgs.electron ];
 
         installPhase = ''
+          mkdir -p $out/share/applications
+
+          cat > $out/share/applications/issue-cards.desktop <<EOF
+          [Desktop Entry]
+          Type=Application
+          Name=Issue Cards
+          Comment=Tracking issues and test procedures
+          Exec=$out/bin/issue-cards
+          Icon=build/icon.svg
+          Terminal=false
+          EOF
         '';
 
         meta = {
