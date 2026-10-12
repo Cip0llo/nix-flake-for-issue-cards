@@ -29,8 +29,6 @@
         buildInputs = [ pkgs.electron ];
 
         installPhase = ''
-          npm build
-
           mkdir -p $out/share/applications
           mkdir -p $out/share/applications/icon
           install -Dm644 assets/icon.svg $out/share/applications/icon/issue-cards.svg
