@@ -25,6 +25,9 @@
         npmDepsHash = "sha256-kkQNjzGdiTmujwfXkI134piz/RUxwZHzhYpZYXyfsoU";
         npmBuildScript = "build:nix";
 
+        ELECTRON_SKIP_BINARY_DOWNLOAD = "1";
+        buildInputs = [ pkgs.electron ];
+
         installPhase = ''
         '';
 
