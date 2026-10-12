@@ -10,7 +10,7 @@
         pkgs = nixpkgs.lib.mkDevShell;
       in {
         buildInputs = [
-          nodejs
+          pkgs.nodejs-slim
         ];
       };
     };
