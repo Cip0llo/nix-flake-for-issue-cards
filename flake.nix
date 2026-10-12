@@ -7,10 +7,9 @@
     devShells = {
       x86_64-linux.default = let
         system = "x86_64-linux";
-        pkgs = nixpkgs.lib.mkDevShell;
       in {
         buildInputs = [
-          pkgs.nodejs-slim
+          nixpkgs.nodejs-slim
         ];
       };
     };
