@@ -17,23 +17,23 @@
       nodejs = pkgs.nodejs;
     in
       pkgs.buildNpmPackage {
-      pname = "Issue cards";
-      version = "1.4.0";
-      src = self;
-      inherit nodejs;
+        pname = "Issue cards";
+        version = "1.4.0";
+        src = self.outPath;
+        inherit nodejs;
 
-      npmDepsHash = "sha256-kkQNjzGdiTmujwfXkI134piz/RUxwZHzhYpZYXyfsoU";
-      npmBuildScript = "build:nix";
+        npmDepsHash = "sha256-kkQNjzGdiTmujwfXkI134piz/RUxwZHzhYpZYXyfsoU";
+        npmBuildScript = "build:nix";
 
-      installPhase = ''
-      '';
+        installPhase = ''
+        '';
 
-      meta = {
-        description = "Tracking issues and test procedures";
-        mainProgram = "issue-cards";
-        platforms = systems;
+        meta = {
+          description = "Tracking issues and test procedures";
+          mainProgram = "issue-cards";
+          platforms = systems;
+        };
       };
-    };
   in {
     packages = forAllSystems (system: {
       default = mkPackage system;
@@ -41,7 +41,7 @@
   });
 
   overlays.default = final: prev: {
-    issue-cards = self.packages.${final.stdev.hostPlatform.system}.default;
+    issue-cards = self.packages.${final.stdenv.hostPlatform.system}.default;
   };
  };
 }
