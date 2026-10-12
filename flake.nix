@@ -31,7 +31,7 @@
         installPhase = ''
           mkdir -p $out/share/applications
           mkdir -p $out/share/applications/icon
-          install -Dm644 assets/icon.svg $out/share/applications/icon/issue-cards.svg
+          install -Dm644 build/icon.svg $out/share/applications/icon/issue-cards.svg
 
           cat > $out/share/applications/issue-cards.desktop <<EOF
           [Desktop Entry]
