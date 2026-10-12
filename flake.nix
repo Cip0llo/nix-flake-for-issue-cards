@@ -49,6 +49,7 @@
           EOF
 
           chmod 755 $out/bin/issue-cards
+          chmod 755 $out/lib/dist/electron/main.js
 
           mkdir -p $out/share/applications
           mkdir -p $out/share/applications/icon
