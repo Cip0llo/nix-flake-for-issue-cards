@@ -40,7 +40,7 @@
       issue-cards = mkPackage system;
   });
 
-  overlays.default = fina: prev: {
+  overlays.default = final: prev: {
     issue-cards = self.packages.${final.stdev.hostPlatform.system}.default;
   };
  };
