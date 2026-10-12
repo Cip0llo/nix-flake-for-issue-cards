@@ -36,8 +36,8 @@
           Type=Application
           Name=Issue Cards
           Comment=Tracking issues and test procedures
-          Exec=$out/bin/issue-cards
-          Icon=build/icon.svg
+          Exec=$out/bin/'Issue Cards.exe'
+          Icon=./build/icon.svg
           Terminal=false
           EOF
         '';
