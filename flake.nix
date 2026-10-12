@@ -22,7 +22,7 @@
       src = self;
       inherit nodejs;
 
-      npmDepsHash = pkgs.lib.fakeHash;
+      npmDepsHash = sha256-kkQNjzGdiTmujwfXkI134piz/RUxwZHzhYpZYXyfsoU=;
       npmBuildScript = "build:nix";
 
       installPhase = ''
