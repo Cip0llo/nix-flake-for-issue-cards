@@ -42,6 +42,8 @@
           Icon=./icon/issue-cards.svg
           Terminal=false
           EOF
+
+          ls -la
         '';
 
         meta = {
