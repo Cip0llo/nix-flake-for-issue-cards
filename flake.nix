@@ -32,28 +32,26 @@
           runHook preInstall
 
           # all files
-          mkdir -p $out/lib
-          cp -r dist $out/lib
-          cp package.json $out/lib
+          mkdir -p $out/lib/issue-cards
+          cp -r dist $out/lib/issue-cards
+          cp package.json $out/lib/issue-cards
 
           # node modules
-          cp -r node_modules $out/lib
+          cp -r node_modules $out/lib/issue-cards
 
           # executable
           mkdir -p $out/bin
 
           cat > $out/bin/issue-cards <<EOF
             #!${pkgs.runtimeShell}
-            exec ${pkgs.electron}/bin/electron \
-            $out/lib/issue-cards/dist/electron/main.js "\$@"
+            exec ${pkgs.electron}/bin/electron $out/lib/issue-cards/dist/electron/main.js "\$@"
           EOF
 
           chmod 755 $out/bin/issue-cards
-          chmod 755 $out/lib/dist/electron/main.js
 
           mkdir -p $out/share/applications
           mkdir -p $out/share/applications/icon
-          install -Dm644 build/icon.svg $out/share/applications/icon/issue-cards.svg
+          install -Dm644 build/icon.png $out/share/applications/icon/issue-cards.png
 
           cat > $out/share/applications/issue-cards.desktop <<EOF
           [Desktop Entry]
