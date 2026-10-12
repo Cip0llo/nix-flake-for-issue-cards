@@ -29,6 +29,27 @@
         buildInputs = [ pkgs.electron ];
 
         installPhase = ''
+          runHook preInstall
+
+          # all files
+          mkdir -p $out/lib
+          cp -r dist $out/lib
+          cp package.json $out/lib
+
+          # node modules
+          cp -r node_modules $out/lib
+
+          # executable
+          mkdir -p $out/bin
+
+          cat > $out/bin/issue-cards <<EOF
+            #!${pkgs.runtimeShell}
+            exec ${pkgs.electron}/bin/electron \
+            $out/lib/issue-cards/dist/electron/main.js "\$@"
+          EOF
+
+          chmod 755 $out/bin/issue-cards
+
           mkdir -p $out/share/applications
           mkdir -p $out/share/applications/icon
           install -Dm644 build/icon.svg $out/share/applications/icon/issue-cards.svg
@@ -38,12 +59,12 @@
           Type=Application
           Name=Issue Cards
           Comment=Tracking issues and test procedures
-          Exec=$out/'Issue Cards.exe'
-          Icon=./icon/issue-cards.svg
+          Exec=$out/bin/issue-cards
+          Icon=issue-cards.svg
           Terminal=false
           EOF
 
-          ls -la
+          runHook postInstall
         '';
 
         meta = {
