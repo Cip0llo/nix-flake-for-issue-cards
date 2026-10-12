@@ -29,15 +29,19 @@
         buildInputs = [ pkgs.electron ];
 
         installPhase = ''
+          npm build
+
           mkdir -p $out/share/applications
+          mkdir -p $out/share/applications/icon
+          install -Dm644 assets/icon.svg $out/share/applications/icon/issue-cards.svg
 
           cat > $out/share/applications/issue-cards.desktop <<EOF
           [Desktop Entry]
           Type=Application
           Name=Issue Cards
           Comment=Tracking issues and test procedures
-          Exec=$out/bin/'Issue Cards.exe'
-          Icon=./build/icon.svg
+          Exec=$out/'Issue Cards.exe'
+          Icon=./icon/issue-cards.svg
           Terminal=false
           EOF
         '';
