@@ -117,6 +117,7 @@ export interface Workspace {
   ownerId: string;
   color: string;
   currentVersion: string;
+  indevVersion: string;
   versions: string[];
   role: MemberRole;
   memberCount: number;

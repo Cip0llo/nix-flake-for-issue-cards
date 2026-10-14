@@ -11,7 +11,7 @@ interface VersionSelectProps {
 }
 
 export default function VersionSelect({ id, value, onChange, className, disabled }: VersionSelectProps) {
-  const { list, current } = useVersions(value);
+  const { list, current, indev } = useVersions(value);
   const names = value && !list.includes(value) ? [value, ...list] : list;
 
   return (
@@ -24,6 +24,7 @@ export default function VersionSelect({ id, value, onChange, className, disabled
           <SelectItem key={name} value={name}>
             <span className="mono">{name}</span>
             {name === current && <Badge variant="outline">current</Badge>}
+            {name === indev && <Badge variant="outline">indev</Badge>}
           </SelectItem>
         ))}
       </SelectContent>

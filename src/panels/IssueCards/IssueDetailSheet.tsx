@@ -27,6 +27,7 @@ import { lastRejection, useIssueStore } from '@/stores/useIssueStore';
 import { useLayoutStore } from '@/stores/useLayoutStore';
 import { relTime } from '@/lib/relTime';
 import { errorText } from '@/lib/supabase';
+import { useIndevVersion } from '@/lib/versions';
 import { useAuthStore, usePermissions } from '@/stores/useAuthStore';
 import { useSeenStore } from '@/stores/useSeenStore';
 import { useUiStore } from '@/stores/useUiStore';
@@ -357,11 +358,14 @@ export default function IssueDetailSheet({ card, onEdit, onSelect }: IssueDetail
 
 function Stamp({ time, by, version }: { time: string; by?: string; version?: string }) {
   const rel = relTime(time);
+  const indev = useIndevVersion();
+  const named = version?.trim() ?? '';
   return (
     <span className="mono flex flex-wrap items-center gap-1.5">
       {time || '-'}
       {rel && <span className="text-muted-foreground">· {rel}</span>}
-      {version?.trim() && <Badge variant="secondary">Ver. {version.trim()}</Badge>}
+      {named && <Badge variant="secondary">Ver. {named}</Badge>}
+      {named && named === indev && <Badge variant="outline">indev build, not released yet</Badge>}
       {by?.trim() && (
         <span className="flex items-center gap-1.5 text-muted-foreground">
           · by <PersonLine name={by.trim()} />
