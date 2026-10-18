@@ -8,7 +8,7 @@ import { registerUploadHandlers } from './ipc/uploadHandlers'
 import { initUpdater } from './services/UpdaterService'
 import { setImgurClientId } from './services/UploadService'
 
-const isDev = false
+const isDev = !app.isPackaged
 
 interface WindowTheme {
   background: string
@@ -100,8 +100,6 @@ function createWindow() {
     })
   } else {
     const htmlPath = path.join(__dirname, '../renderer/index.html')
-    console.log('test1:', htmlPath)
-    console.log('test2:', require('node:fs').existsSync(htmlPath))
 
     win.webContents.on('did-fail-load', (_event, code, description, url) => {
       console.error('Failed:', { code, description, url })
@@ -143,11 +141,6 @@ const singleInstance = isDev || app.requestSingleInstanceLock()
 if (!singleInstance) app.quit()
 
 app.whenReady().then(() => {
-  console.log('app.isPackaged:', app.isPackaged)
-  console.log('app.getAppPath():', app.getAppPath())
-  console.log('__dirname:', __dirname)
-  console.log('isDev:', isDev)
-
   if (!singleInstance) return
 
   Menu.setApplicationMenu(null)
