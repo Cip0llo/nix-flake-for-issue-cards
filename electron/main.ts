@@ -8,7 +8,7 @@ import { registerUploadHandlers } from './ipc/uploadHandlers'
 import { initUpdater } from './services/UpdaterService'
 import { setImgurClientId } from './services/UploadService'
 
-const isDev = app.isPackaged
+const isDev = !app.isPackaged
 
 interface WindowTheme {
   background: string
