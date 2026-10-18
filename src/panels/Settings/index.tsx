@@ -598,6 +598,8 @@ function WorkspaceCard() {
   const renameWorkspace = useAuthStore(s => s.renameWorkspace);
   const recolorWorkspace = useAuthStore(s => s.recolorWorkspace);
   const setCurrentVersion = useAuthStore(s => s.setCurrentVersion);
+  const setIndevVersion = useAuthStore(s => s.setIndevVersion);
+  const releaseIndev = useAuthStore(s => s.releaseIndev);
   const leaveWorkspace = useAuthStore(s => s.leaveWorkspace);
   const regenerateInviteCode = useAuthStore(s => s.regenerateInviteCode);
   const meId = useAuthStore(s => s.profile?.id);
@@ -607,6 +609,7 @@ function WorkspaceCard() {
   const active = workspaces.find(w => w.id === activeId) ?? null;
   const [name, setName] = useState(active?.name ?? '');
   const [version, setVersion] = useState<string | null>(null);
+  const [indev, setIndev] = useState<string | null>(null);
   const [code, setCode] = useState('');
   const [copied, setCopied] = useState(false);
 
@@ -710,6 +713,51 @@ function WorkspaceCard() {
               }
             >
               Save
+            </Button>
+          </SettingRow>
+
+          <ItemSeparator />
+          <SettingRow
+            title="Indev build"
+            description={
+              can.editWorkspace
+                ? 'The version being built now. Fixes made on it are marked indev until you release it, then it becomes the current version'
+                : 'Set by the owner and the admins of this workspace'
+            }
+          >
+            <Input
+              className="w-[140px]"
+              value={indev ?? active.indevVersion}
+              placeholder="1.1.0"
+              maxLength={VERSION_MAX}
+              disabled={!can.editWorkspace}
+              onChange={e => setIndev(cleanVersion(e.target.value))}
+            />
+            <Button
+              size="sm"
+              disabled={!can.editWorkspace || indev === null || indev === active.indevVersion}
+              onClick={() =>
+                void setIndevVersion(active.id, indev ?? '')
+                  .then(() => {
+                    setIndev(null);
+                    toast.success('Indev version saved');
+                  })
+                  .catch(err => toast.error(errorText(err)))
+              }
+            >
+              Save
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!can.editWorkspace || !active.indevVersion}
+              onClick={() =>
+                void releaseIndev(active.id)
+                  .then(() => toast.success(`${active.indevVersion} is now the current version`))
+                  .catch(err => toast.error(errorText(err)))
+              }
+            >
+              Release
             </Button>
           </SettingRow>
 

@@ -484,6 +484,12 @@ function SidebarMenuButton({
 } & VariantProps<typeof sidebarMenuButtonVariants>) {
   const Comp = asChild ? Slot.Root : "button"
   const { isMobile, state } = useSidebar()
+  const [tipOpen, setTipOpen] = React.useState(false)
+  const tipAllowed = state === "collapsed" && !isMobile
+
+  React.useEffect(() => {
+    setTipOpen(false)
+  }, [state])
 
   const button = (
     <Comp
@@ -507,12 +513,16 @@ function SidebarMenuButton({
   }
 
   return (
-    <Tooltip>
+    <Tooltip
+      open={tipOpen && tipAllowed}
+      onOpenChange={setTipOpen}
+      disableHoverableContent
+    >
       <TooltipTrigger asChild>{button}</TooltipTrigger>
       <TooltipContent
         side="right"
         align="center"
-        hidden={state !== "collapsed" || isMobile}
+        hidden={!tipAllowed}
         {...tooltip}
       />
     </Tooltip>

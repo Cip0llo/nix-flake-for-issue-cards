@@ -8,12 +8,17 @@ function byNewest(a: string, b: string): number {
   return b.localeCompare(a, undefined, { numeric: true });
 }
 
-export function useVersions(extra = ''): { list: string[]; current: string } {
+export function useIndevVersion(): string {
+  return useAuthStore(s => s.workspaces.find(w => w.id === s.activeWorkspaceId)?.indevVersion ?? '');
+}
+
+export function useVersions(extra = ''): { list: string[]; current: string; indev: string } {
   const workspace = useAuthStore(s => s.workspaces.find(w => w.id === s.activeWorkspaceId) ?? null);
   const cards = useIssueStore(s => s.cards);
   const features = useTestStore(s => s.features);
 
   const current = workspace?.currentVersion ?? '';
+  const indev = workspace?.indevVersion ?? '';
 
   const list = useMemo(() => {
     const seen = new Map<string, string>();
@@ -22,6 +27,7 @@ export function useVersions(extra = ''): { list: string[]; current: string } {
       if (name && !seen.has(name.toLowerCase())) seen.set(name.toLowerCase(), name);
     };
     add(current);
+    add(indev);
     add(extra);
     workspace?.versions.forEach(add);
     for (const card of cards) {
@@ -35,7 +41,7 @@ export function useVersions(extra = ''): { list: string[]; current: string } {
       feature.results.forEach(r => add(r.version));
     }
     return [...seen.values()].sort(byNewest);
-  }, [workspace, current, extra, cards, features]);
+  }, [workspace, current, indev, extra, cards, features]);
 
-  return { list, current };
+  return { list, current, indev };
 }

@@ -126,6 +126,8 @@ interface AuthStore {
   renameWorkspace: (id: string, name: string) => Promise<void>;
   recolorWorkspace: (id: string, color: string) => Promise<void>;
   setCurrentVersion: (id: string, version: string) => Promise<void>;
+  setIndevVersion: (id: string, version: string) => Promise<void>;
+  releaseIndev: (id: string) => Promise<void>;
   regenerateInviteCode: (id: string) => Promise<void>;
   leaveWorkspace: (id: string) => Promise<void>;
   removeMember: (userId: string) => Promise<void>;
@@ -248,6 +250,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         owner_id: string;
         color: string | null;
         current_version: string | null;
+        indev_version: string | null;
         versions: string[] | null;
         workspace_members: { role: string }[] | null;
       } | null;
@@ -262,6 +265,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         ownerId: r.workspaces!.owner_id,
         color: r.workspaces!.color || 'blue',
         currentVersion: r.workspaces!.current_version ?? '',
+        indevVersion: r.workspaces!.indev_version ?? '',
         versions: r.workspaces!.versions ?? [],
         role: toRole(r.role),
         memberCount: (r.workspaces!.workspace_members ?? []).filter(m => m.role !== 'reader').length,
@@ -396,6 +400,26 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const { error } = await supabase()
       .from('workspaces')
       .update({ current_version: version.trim() })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+    await get().loadWorkspaces();
+  },
+
+  setIndevVersion: async (id, version) => {
+    const { error } = await supabase()
+      .from('workspaces')
+      .update({ indev_version: version.trim() })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+    await get().loadWorkspaces();
+  },
+
+  releaseIndev: async id => {
+    const indev = get().workspaces.find(w => w.id === id)?.indevVersion ?? '';
+    if (!indev) return;
+    const { error } = await supabase()
+      .from('workspaces')
+      .update({ current_version: indev, indev_version: '' })
       .eq('id', id);
     if (error) throw new Error(error.message);
     await get().loadWorkspaces();
