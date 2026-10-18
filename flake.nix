@@ -44,6 +44,7 @@
 
           cat > $out/bin/issue-cards <<EOF
             #!${pkgs.runtimeShell}
+            export ELECTRON_FORCE_IS_PACKAGED=1
             exec ${pkgs.electron}/bin/electron $out/lib/issue-cards "\$@"
           EOF
 
