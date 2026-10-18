@@ -99,7 +99,15 @@ function createWindow() {
       if (level >= 2) console.log(`[renderer] ${message} (${sourceId}:${line})`)
     })
   } else {
-    win.loadFile(path.join(__dirname, '../renderer/index.html'))
+    const htmlPath = path.join(__dirname, '../renderer/index.html')
+    console.log('test1:', htmlPath)
+    console.log('test2:', require('node:fs').existsSync(htmlPath))
+
+    win.webContents.on('did-fail-load', (_event, code, description, url) => {
+      console.error('Failed:', { code, description, url })
+    })
+
+    win.loadFile(htmlPath)
   }
 
   return win
