@@ -65,10 +65,6 @@ function isAppUrl(url: string): boolean {
 }
 
 function createWindow() {
-  console.log('app.isPackaged:', app.isPackaged)
-  console.log('isDev:', isDev)
-  console.log('NODE_ENV:', process.env.NODE_ENV)
-  
   const theme = readTheme()
 
   const win = new BrowserWindow({
@@ -147,6 +143,11 @@ const singleInstance = isDev || app.requestSingleInstanceLock()
 if (!singleInstance) app.quit()
 
 app.whenReady().then(() => {
+  console.log('app.isPackaged:', app.isPackaged)
+  console.log('app.getAppPath():', app.getAppPath())
+  console.log('__dirname:', __dirname)
+  console.log('isDev:', isDev)
+
   if (!singleInstance) return
 
   Menu.setApplicationMenu(null)
