@@ -65,6 +65,10 @@ function isAppUrl(url: string): boolean {
 }
 
 function createWindow() {
+  console.log('app.isPackaged:', app.isPackaged)
+  console.log('isDev:', isDev)
+  console.log('NODE_ENV:', process.env.NODE_ENV)
+  
   const theme = readTheme()
 
   const win = new BrowserWindow({
